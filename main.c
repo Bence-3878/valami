@@ -6,10 +6,10 @@
 
 
 typedef struct {
-    int osz[L];                                     // A addot szó hosszból az összes darabszáma
+    int osz;                                        // Megadja az összes szó együttes hosszát
     int szam[L][N];                                 // Addot hossz és kezdés szerinti darabszám
-    char *m[L];                                     // A memoria cime ahová a szavakat betöltöm azért kell hogy könnyű legyen felszbaditani
-    char **szo[L][N];                               // maga a szó lista [hossz][kezdés][hányadik_szó][karter]
+    char *m;                                     // A memoria cime ahová a szavakat betöltöm azért kell hogy könnyű legyen felszbaditani
+    char *szo[L][N];                               // maga a szó lista [hossz][kezdés][hányadik_szó][karter]
 } szavak;
 
 char *init(szavak *s) {
@@ -29,22 +29,21 @@ char *init(szavak *s) {
     it['\''] = 111; it['\\'] =   N;
 
     FILE *file = fopen("szavak", "rb");
-    fread(s->osz, sizeof(int), L, file);                    // adminisztrativ adatok betöltése
+    fread(&s->osz, sizeof(int), 1, file);                    // adminisztrativ adatok betöltése
     fread((int *) s->szam, sizeof(int), L * N, file);
+    s->m = (char *) calloc(sizeof(char), s->osz);
+    fread((char *) s->m, sizeof(char), s->osz, file);
+    // egy hosszú karakter láncként töltöm be a szavakat lezázó 0 nélkül
 
+    int n = 0;
     for (int i = 0; i < L; i++) {
-        s->m[i] = (char *) calloc(sizeof(char), s->osz[i] * (i + 1));
-        fread((char *) s->m[i], sizeof(char), s->osz[i] * (i + 1), file);
-        // egy hosszú karakter láncként töltöm be a szavakat lezázó 0 nélkül
-
         for (int j = 0; j < N; j++) {
-            int n = 0;
             if (s->szam[i][j] == 0)
                 continue;
 
-            s->szo[i][j] = (char **)(s->m[i] + n * (i + 1));
+            s->szo[i][j] = (s->m + n);
             // ugy teszek mintha szavak listája lenne nem egy karakter lánc
-            n += s->szam[i][j];
+            n += s->szam[i][j] * (i + 1);
             // pozició nyivántartás
 
         }
@@ -55,41 +54,39 @@ char *init(szavak *s) {
 
 void save(szavak *s) {
     FILE *file = fopen("szavak", "wb");
-    fwrite(s->osz, sizeof(int), L, file);
+    fwrite(&s->osz, sizeof(int), 1, file);
     fwrite((int *) s->szam, sizeof(int), L * N, file);
-    for (int i = 0; i < L; i++) {
-        s->m[i] = (char *) calloc(sizeof(char), s->osz[i] * (i + 1));
-        fwrite((char *) s->m[i], sizeof(char), s->osz[i] * (i + 1), file);
-    }
+
+    s->m = (char *) calloc(sizeof(char), s->osz);
+    fwrite((char *) s->m, sizeof(char), s->osz, file);
+
 }
 
 void r(void) {
     FILE *file = fopen("szavak", "wb");
-    int a[L][N] = {0};
-    fwrite(a, sizeof(int), L * N, file);
+    int a[L*N+1] = {0};
+    fwrite(a, sizeof(int), L * N + 1, file);
     fclose(file);
 }
 
 int main() {
+    r();
     szavak sz = {0};
     char *it = init(&sz), s[500] = {0};
-    char szo1[] = "alma";
-    char szo2[] = "körte";
-    sz.m[3] = szo1;
-    sz.m[4] = szo2;
-    sz.osz[3] = 1;
-    sz.osz[4] = 1;
+    char szo1[] = "almakörte";
+    sz.m = szo1;
+    sz.osz = 9;
     sz.szam[3][0] = 1;
     sz.szam[4][10] = 1;
-    sz.szo[3][0] = (char**) szo1;
-    sz.szo[4][10] =(char**) szo2;
+    sz.szo[3][0] = szo1;
+    sz.szo[4][10] =szo1 + 4;
 
 
 
     save(&sz);
     free(it);
     for (int i = 0; i < L; i++)
-        free(sz.m[i]);
+        free(sz.m);
     free(sz.szo[0][0]);
     return 0;
 }
