@@ -4,16 +4,17 @@
 #define L 40                                        //  A szavak maximális hossza
 #define N 112                                       // Ennyi darab különvöző karaktert támogatok
 
+char *it;
 
 typedef struct {
     int osz;                                        // Megadja az összes szó együttes hosszát
     int szam[L][N];                                 // Addot hossz és kezdés szerinti darabszám
     char *m;                                        // A memoria cime ahová a szavakat betöltöm azért kell hogy könnyű legyen felszbaditani
-    char *szo[L][N];                                // maga a szó lista [hossz][kezdés][hányadik_szó][karter]
+    char *szo[L][N];                                // maga a szó lista [hossz][kezdés][hányadik_szó * hossz + karter]
 } szavak;
 
 char *init(szavak *s) {
-    char *it;
+
     it = (char *)calloc(sizeof(char), 'ű'+1);   // A kezdés cimének forditása
     it['a']  =   1; it['b']  =   2; it['c'] =   3; it['d'] =   4; it['e'] =   5; it['f'] =   6;  it['g'] =   7; it['h'] =   8; it['i'] =   9; it['j'] =  10;
     it['k']  =  11; it['l']  =  12; it['m'] =  13; it['n'] =  14; it['o'] =  15; it['p'] =  16;  it['q'] =  17; it['r'] =  18; it['s'] =  19; it['t'] =  20;
@@ -54,18 +55,136 @@ char *init(szavak *s) {
     return it;
 }
 
-void save(szavak *s,char *n) {
-    int i;
-    for (i = 0; n[i]; i++);
+static int cmp(const void *a, const void *b) {
+    char *aa = *(char **)a;
+    char *bb = *(char **)b;
+    int i,j;
+    for (i = 0; aa[i] && aa[i] != ' ' && aa[i] != '\n' && aa[i] != '\t';i++);
+    for (j = 0; bb[j] && bb[j] != ' ' && bb[j] != '\n' && bb[j] != '\t';j++);
 
+    if (i != j)
+        return (i > j) - (i < j);
+
+    for (int k = 0; k < i;k++) {
+        if (aa[k] != bb[k]) {
+            return  (it[aa[k]] > it[bb[k]]) - (it[aa[k]] < it[bb[k]]);
+
+        }
+    }
+    return 0;
+
+
+}
+
+void copy(char* a,char* b, int n, int ai, int bi) { // át másolom b-ből a-ba n karakter b bi karakterétől a ai karakteréig
+    for (int i = 0; b[i + bi] && n > i;i++)
+        a[i + ai] = b[i + bi];
+
+}
+
+int keres(char *a, char *b, int n, int l, int *v) {
+    if (n == 0) {
+        *v = 0;
+        return 0;
+    }
+    int m, c;
+    for (int i = 0, j = n-1; i <= j ; i++) {
+        m = (i + j) / 2;
+        for (int k = 0; k < l;k++) {
+            c = (it[a[l*m + k]] > it[b[k]]) - (it[a[l*m +k]] < it[b[k]]);
+            if (c == 0)
+                continue;
+        }
+        if (c == 0) {
+            *v = 1;
+            return m;
+        }
+        if (c == -1)
+            j = m - 1;
+        if (c == 1)
+            i = m + 1;
+    }
+    *v = 0;
+    return m + c;
+
+
+}
+
+void save(szavak *szo,char *n) {
+    int i,c=0, j=0 ;
+    szavak nszo = {0};
+
+    for (i = 0; n[i];i++)
+        if (n[i] != ' ' && n[i] != '\n' && n[i] != '\t')
+            c++;
+
+    nszo.osz = c + szo->osz;
+    for (int ii = 0; ii < L; ii++)
+        for (int jj = 0; jj < N; jj++)
+            nszo.szam[ii][jj] = szo->szam[ii][jj];
+
+    int a = (i-c+1);
+    c = 0;
+    char *s = n;
+
+    int szam[L][N];
+    //char **m = (char **) calloc(sizeof(char*) , a );
+    char *m[a];
+    for (i = 0; n[i];i++,j++)
+        if (n[i] == ' ' || n[i] == '\n' || n[i] == '\t') {
+            szam[j][it[*s]]++;
+            nszo.szam[j][it[*s]]++;
+            m[c++] = s;
+            s = n + i + 1; // &n[i+1]
+            j=-1;
+        }
+    m[c] = s;
+
+    qsort(m, a, sizeof(char *), cmp);
+    int ci = 0, cni = 0, mi = 0;
+    //char *nm = (char *) calloc(sizeof(char) , nszo.osz );
+    char nm[nszo.osz];
+    for (i = 0; i < L; i++) {
+        for (j = 0; j < N; j++) {
+            if (szam[i][j] == 0) {
+                copy(nm, szo->m, szo->szam[i][j] * i, cni, ci);
+                ci += szo->szam[i][j] * i;
+                cni += szo->szam[i][j] * i;
+            }
+            else {
+                int pnmi = 0, nmi = 0;
+                for (int k = 0; k < szam[i][j]; k++) {
+                    int v = 0;
+                    nmi = keres(szo->szo[i][j], m[mi], szo->szam[i][j], i, &v);
+                    if (!v) {
+                        copy(nm, szo->m, nmi - pnmi, cni, ci);
+                        ci += nmi - pnmi;
+                        cni += nmi - pnmi;
+                        copy(nm, m[mi], i, cni, 0);
+                        cni += i;
+                        mi++;
+                        pnmi = nmi;
+                    }
+                    else {
+                        mi++;
+                        nszo.szam[i][j]--;
+                        nszo.osz-=i;
+                    }
+                }
+                copy(nm, szo->m,  szo->szam[i][j] * i - pnmi, cni, ci);
+                ci += szo->szam[i][j] * i - pnmi;
+                cni += szo->szam[i][j] * i - pnmi;
+            }
+        }
+    }
     FILE *file = fopen("szavak", "wb");
-    fwrite(&s->osz, sizeof(int), 1, file);
-    fwrite((int *) s->szam, sizeof(int), L * N, file);
-    fwrite((char *) s->m, sizeof(char), s->osz, file);
+    fwrite(&nszo.osz, sizeof(int), 1, file);
+    fwrite((int *) nszo.szam, sizeof(int), L * N, file);
+    fwrite(nm, sizeof(char), nszo.osz, file);
     fclose(file);
 }
 
-void r(void) {
+void r(void) {            // reseteli az adatbázist    teszteléshez jó
     FILE *file = fopen("szavak", "wb");
     int a[L*N+1] = {0};
     fwrite(a, sizeof(int), L * N + 1, file);
@@ -78,15 +197,22 @@ char **tordelo(char* a) {
 }
 
 int main() {
+    r();
     szavak sz = {0};
     int v = 1;                       // ha v igaz kell tanulni
-    char *it = init(&sz), s[500] = {0};
-
-    char *t ="Mindenki szavakat kell tudni.";
-
+    char s[500] = {0};
+    init(&sz);
+    char *t1 ="Mindenki szavakat kell tudni.";
+    char *t2 =
+            "Ez egy példa szöveg ami elég hosszú és tartalmaz különböző karaktereket valamint írásjeleket is. "
+            "Itt van benne vessző, pont és több szó ami egymás után következik hogy tesztelhessük a program "
+            "működését, a szavak feldolgozását és egyéb funkciókat is amik implementálva vannak ebben a kódban. "
+            "A szöveg már elég hosszú lehet a teszteléshez és tartalmaz nagybetűket Kisbetűket valamint . , ! ? írásjeleket is.";
+    char *t3 = "A majom a fara maszott hogy banant egyen.";
+    char *t = "AA b aa ba ab bb B aaaaa aaa abb aab baa baaaaaa aaaaaaaaaaaaaaaaaaaaaaa";
 
     if (v)
-        save(&sz, "szavak");
+        save(&sz, t); //"szavak");
     free(it);
     free(sz.m);
     return 0;
