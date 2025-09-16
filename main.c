@@ -8,8 +8,8 @@
 typedef struct {
     int osz;                                        // Megadja az összes szó együttes hosszát
     int szam[L][N];                                 // Addot hossz és kezdés szerinti darabszám
-    char *m;                                     // A memoria cime ahová a szavakat betöltöm azért kell hogy könnyű legyen felszbaditani
-    char *szo[L][N];                               // maga a szó lista [hossz][kezdés][hányadik_szó][karter]
+    char *m;                                        // A memoria cime ahová a szavakat betöltöm azért kell hogy könnyű legyen felszbaditani
+    char *szo[L][N];                                // maga a szó lista [hossz][kezdés][hányadik_szó][karter]
 } szavak;
 
 char *init(szavak *s) {
@@ -31,7 +31,7 @@ char *init(szavak *s) {
     FILE *file = fopen("szavak", "rb");
     fread(&s->osz, sizeof(int), 1, file);                    // adminisztrativ adatok betöltése
     fread((int *) s->szam, sizeof(int), L * N, file);
-    s->m = (char *) calloc(sizeof(char), s->osz);
+    s->m = (char *) malloc(sizeof(char) * s->osz);
     fread((char *) s->m, sizeof(char), s->osz, file);
     // egy hosszú karakter láncként töltöm be a szavakat lezázó 0 nélkül
 
@@ -45,6 +45,8 @@ char *init(szavak *s) {
             // ugy teszek mintha szavak listája lenne nem egy karakter lánc
             n += s->szam[i][j] * (i + 1);
             // pozició nyivántartás
+            if (n == s->osz)
+                i = L, j = N;
 
         }
     }
@@ -52,14 +54,15 @@ char *init(szavak *s) {
     return it;
 }
 
-void save(szavak *s) {
+void save(szavak *s,char *n) {
+    int i;
+    for (i = 0; n[i]; i++);
+
     FILE *file = fopen("szavak", "wb");
     fwrite(&s->osz, sizeof(int), 1, file);
     fwrite((int *) s->szam, sizeof(int), L * N, file);
-
-    s->m = (char *) calloc(sizeof(char), s->osz);
     fwrite((char *) s->m, sizeof(char), s->osz, file);
-
+    fclose(file);
 }
 
 void r(void) {
@@ -69,24 +72,22 @@ void r(void) {
     fclose(file);
 }
 
+char **tordelo(char* a) {
+    for (int i = 0; a[i];a[i]==32?a[i++]=0:i++);
+    return (char **)a;
+}
+
 int main() {
-    r();
     szavak sz = {0};
+    int v = 1;                       // ha v igaz kell tanulni
     char *it = init(&sz), s[500] = {0};
-    char szo1[] = "almakörte";
-    sz.m = szo1;
-    sz.osz = 9;
-    sz.szam[3][0] = 1;
-    sz.szam[4][10] = 1;
-    sz.szo[3][0] = szo1;
-    sz.szo[4][10] =szo1 + 4;
+
+    char *t ="Mindenki szavakat kell tudni.";
 
 
-
-    save(&sz);
+    if (v)
+        save(&sz, "szavak");
     free(it);
-    for (int i = 0; i < L; i++)
-        free(sz.m);
-    free(sz.szo[0][0]);
+    free(sz.m);
     return 0;
 }
