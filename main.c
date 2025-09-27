@@ -146,34 +146,34 @@ void save(szavak *szo,char *n) {
     char nm[nszo.osz];
     for (i = 0; i < L; i++) {
         for (j = 0; j < N; j++) {
-            if (szam[i][j] == 0) {
-                copy(nm, szo->m, szo->szam[i][j] * i, cni, ci);
-                ci += szo->szam[i][j] * i;
-                cni += szo->szam[i][j] * i;
+            if (szam[i+1][j] == 0) {
+                //copy(nm, szo->m, szo->szam[i][j] * i, cni, ci);
+                ci += szo->szam[i+1][j] * (i+1);
+                cni += szo->szam[i+1][j] * (i+1);
             }
             else {
                 int pnmi = 0, nmi = 0;
-                for (int k = 0; k < szam[i][j]; k++) {
+                for (int k = 0; k < szam[i+1][j]; k++) {
                     int v = 0;
-                    nmi = keres(szo->szo[i][j], m[mi], szo->szam[i][j], i, &v);
+                    nmi = keres(szo->szo[i+1][j], m[mi], szo->szam[i+1][j], i+1, &v);
                     if (!v) {
-                        copy(nm, szo->m, nmi - pnmi, cni, ci);
+                        //copy(nm, szo->m, nmi - pnmi, cni, ci);
                         ci += nmi - pnmi;
                         cni += nmi - pnmi;
-                        copy(nm, m[mi], i, cni, 0);
-                        cni += i;
+                        copy(nm, m[mi], i+1, cni, 0);
+                        cni += i+1;
                         mi++;
                         pnmi = nmi;
                     }
                     else {
                         mi++;
-                        nszo.szam[i][j]--;
-                        nszo.osz-=i;
+                        nszo.szam[i+1][j]--;
+                        nszo.osz-=i+1;
                     }
                 }
-                copy(nm, szo->m,  szo->szam[i][j] * i - pnmi, cni, ci);
-                ci += szo->szam[i][j] * i - pnmi;
-                cni += szo->szam[i][j] * i - pnmi;
+                //copy(nm, szo->m,  szo->szam[i+1][j] * (i+1) - pnmi, cni, ci);
+                ci += szo->szam[i+1][j] * (i+1) - pnmi;
+                cni += szo->szam[i+1][j] * (i+1) - pnmi;
             }
         }
     }
